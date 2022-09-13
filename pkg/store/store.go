@@ -1,16 +1,20 @@
 package store
 
-import "os"
+import (
+	"encoding/csv"
+	"log"
+	"os"
+	"strconv"
+)
 
 type Store struct {
-	Storage *[]City
+	Storage []City
 }
 
-func GetStore() *Store{
+func GetStore() *Store {
 	var store Store
-	fileData := ReadCsvFile("./pkg/store/cities.csv")
-	// citiesList := createCitiesList(fileData)
-	store.Storage = createCitiesList(fileData)
+	fileData := store.ReadCsvFile("./pkg/store/cities.csv")
+	store.createCitiesList(fileData)
 	return &store
 }
 
@@ -37,9 +41,7 @@ func toInt(str string) int {
 	return number
 }
 
-func createCitiesList(data [][]string) *[]City {
-	// var citiesList []City
-	citiesList := make([]City, 0)
+func (s *Store) createCitiesList(data [][]string) {
 	for _, line := range data {
 		var newCity City
 		newCity.Id = toInt(line[0])
@@ -48,19 +50,18 @@ func createCitiesList(data [][]string) *[]City {
 		newCity.District = line[3]
 		newCity.Population = toInt(line[4])
 		newCity.Foundation = toInt(line[5])
-		citiesList = append(citiesList, newCity)
+		s.Storage = append(s.Storage, newCity)
 	}
-	return &citiesList
 }
 
-func WriteToCsv(data *[]City) {
+func (s *Store) WriteToCsv() {
 	f, err := os.Create("./pkg/store/cities2.csv")
 	if err != nil {
 		log.Println(err)
 	}
 	w := csv.NewWriter(f)
 	defer f.Close()
-	for _, line := range *data {
+	for _, line := range s.Storage {
 		var record []string
 		record = append(record, strconv.Itoa(line.Id))
 		record = append(record, line.Name)
