@@ -2,6 +2,7 @@ package store
 
 import (
 	"encoding/csv"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -55,7 +56,8 @@ func (s *Store) createCitiesList(data [][]string) {
 }
 
 func (s *Store) WriteToCsv() {
-	f, err := os.Create("./pkg/store/cities2.csv")
+	fmt.Println("test")
+	f, err := os.Create("./pkg/store/cities.csv")
 	if err != nil {
 		log.Println(err)
 	}
