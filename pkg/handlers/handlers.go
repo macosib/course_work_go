@@ -15,20 +15,28 @@ import (
 )
 
 type Handler struct {
-	storage *store.Store
+	// storage *store.Store
+	storage *[]store.City
 }
 
-func GetHandler() Handler {
+func GetHandler() *Handler {
 	var handler Handler
+	fileData := utils.ReadCsvFile ReadCsvFile("./pkg/store/cities.csv")
+	// citiesList := createCitiesList(fileData)
+	store.Storage = createCitiesList(fileData)
+	return &store
 	handler.storage = store.GetStore()
-	return handler
+	return &handler
 
 }
 
 func (h *Handler) CityView(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.Method == "GET":
-		fmt.Println(h.storage)
+		
+		for i := 0; i < len(*h.storage.Storage); i++ {
+			fmt.Println(h.storage.Storage)
+		}
 		w.Header().Set("Content-Type", "application/json")
 		response, _, err := getCity(h, r)
 		if err != nil {
@@ -45,7 +53,7 @@ func (h *Handler) CityView(w http.ResponseWriter, r *http.Request) {
 			render.Render(w, r, ErrInvalidRequest(err))
 			return
 		}
-		remove(*h.storage.Store, index)
+		remove(*h.storage.Storage, index)
 		w.WriteHeader(http.StatusOK)
 		res, _ := json.Marshal(response)
 		w.Write(res)
@@ -119,7 +127,7 @@ func (h *Handler) GetInfoCityView(w http.ResponseWriter, r *http.Request) {
 
 func getCityListByRegion(h *Handler, r *http.Request, value string) []store.City {
 	result := make([]store.City, 0)
-	for _, v := range *h.storage.Store {
+	for _, v := range *h.storage.Storage {
 		if v.Region == value {
 			result = append(result, v)
 		}
@@ -137,7 +145,7 @@ func getCityListByPopulation(h *Handler, r *http.Request, FoundationFrom string,
 		return nil, err
 	}
 	result := make([]store.City, 0)
-	for _, v := range *h.storage.Store {
+	for _, v := range *h.storage.Storage {
 		if v.Population >= start && v.Population <= end {
 			result = append(result, v)
 		}
@@ -155,7 +163,7 @@ func getCityListByFoundation(h *Handler, r *http.Request, PopulationFrom string,
 		return nil, err
 	}
 	result := make([]store.City, 0)
-	for _, v := range *h.storage.Store {
+	for _, v := range *h.storage.Storage {
 		if v.Foundation >= start && v.Foundation <= end {
 			result = append(result, v)
 		}
@@ -165,7 +173,7 @@ func getCityListByFoundation(h *Handler, r *http.Request, PopulationFrom string,
 
 func getCityListByDistrict(h *Handler, r *http.Request, value string) []store.City {
 	result := make([]store.City, 0)
-	for _, v := range *h.storage.Store {
+	for _, v := range *h.storage.Storage {
 		if v.District == value {
 			result = append(result, v)
 		}
@@ -205,8 +213,8 @@ func addCity(h *Handler, r *http.Request, city *store.City) map[string]string {
 		result["error"] = "Такой город уже есть в списке!"
 		return result
 	}
-	newStore := append(*h.storage.Store, *city)
-	h.storage.Store = &newStore
+	newStore := append(*h.storage.Storage, *city)
+	h.storage.Storage = &newStore
 	result["status"] = "Город успешно добавлен!"
 	return result
 }
@@ -235,12 +243,12 @@ func changePopulationCity(h *Handler, r *http.Request) (*store.City, error) {
 	if err != nil {
 		return nil, err
 	}
-	for index, v := range *h.storage.Store {
+	for index, v := range *h.storage.Storage {
 		if v.Id == cityId {
 			v.Population = newPopulation
-			remove(*h.storage.Store, index)
-			newStore := append(*h.storage.Store, v)
-			h.storage.Store = &newStore
+			remove(*h.storage.Storage, index)
+			newStore := append(*h.storage.Storage, v)
+			h.storage.Storage = &newStore
 			return &v, nil
 		}
 	}
@@ -248,7 +256,7 @@ func changePopulationCity(h *Handler, r *http.Request) (*store.City, error) {
 }
 
 func findCity(h *Handler, cityId int) (*store.City, int, error) {
-	for index, v := range *h.storage.Store {
+	for index, v := range *h.storage.Storage {
 		if v.Id == cityId {
 			return &v, index, nil
 		}

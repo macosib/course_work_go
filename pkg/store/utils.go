@@ -30,8 +30,9 @@ func toInt(str string) int {
 	return number
 }
 
-func createCitiesList(data [][]string) []City {
-	var citiesList []City
+func createCitiesList(data [][]string) *[]City {
+	// var citiesList []City
+	citiesList := make([]City, 0)
 	for _, line := range data {
 		var newCity City
 		newCity.Id = toInt(line[0])
@@ -42,7 +43,7 @@ func createCitiesList(data [][]string) []City {
 		newCity.Foundation = toInt(line[5])
 		citiesList = append(citiesList, newCity)
 	}
-	return citiesList
+	return &citiesList
 }
 
 func WriteToCsv(data *[]City) {
