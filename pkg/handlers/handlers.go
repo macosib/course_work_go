@@ -42,17 +42,22 @@ func (h *Handler) CityView(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		res, _ := json.Marshal(response)
 		w.Write(res)
-	// case r.Method == "DELETE":
-	// 	w.Header().Set("Content-Type", "application/json")
-	// 	response, _, err := getCity(h, r)
-	// 	if err != nil {
-	// 		render.Render(w, r, ErrInvalidRequest(err))
-	// 		return
-	// 	}
-	// 	remove(h.storage.Storage, index)
-	// 	w.WriteHeader(http.StatusOK)
-	// 	res, _ := json.Marshal(response)
-	// 	w.Write(res)
+	case r.Method == "DELETE":
+		w.Header().Set("Content-Type", "application/json")
+		response, index, err := getCity(h, r)
+		answer := *response
+		fmt.Println("response", response)
+		if err != nil {
+			render.Render(w, r, ErrInvalidRequest(err))
+			return
+		}
+		fmt.Println("h.storage.Storage - before", h.storage.Storage)
+		remove(h.storage.Storage, index)
+		fmt.Println("h.storage.Storage", h.storage.Storage)
+		w.WriteHeader(http.StatusOK)
+		fmt.Println("response -after", answer)
+		res, _ := json.Marshal(answer)
+		w.Write(res)
 	// case r.Method == "PATCH":
 	// w.Header().Set("Content-Type", "application/json")
 	// response, err := changePopulationCity(h, r)
@@ -206,11 +211,10 @@ func addCity(h *Handler, r *http.Request, city *store.City) map[string]string {
 	result := make(map[string]string)
 	_, index, _ := findCity(h, city.Id)
 	if index != -1 {
-		result["error"] = "Такой город уже есть в списке!"
+		result["status"] = "Такой город уже есть в списке!"
 		return result
 	}
-	newStore := append(h.storage.Storage, *city)
-	h.storage.Storage = newStore
+	h.storage.Storage = append(h.storage.Storage, *city)
 	result["status"] = "Город успешно добавлен!"
 	return result
 }
@@ -254,17 +258,17 @@ func getCity(h *Handler, r *http.Request) (*store.City, int, error) {
 func findCity(h *Handler, cityId int) (*store.City, int, error) {
 	for index, v := range h.storage.Storage {
 		if v.Id == cityId {
-			return &v, index, nil
+			return &h.storage.Storage[index], index, nil
 		}
 	}
 	return nil, -1, errors.New("Город с таким id не найден")
 }
 
-// // func remove(slice []store.City, s int) []store.City {
-// // 	return append(slice[:s], slice[s+1:]...)
-// // }
-
-// func remove(s []store., i int) []store.City {
-// 	s[i] = s[len(s)-1]
-// 	return s[:len(s)-1]
+// func remove(slice []store.City, s int) []store.City {
+// 	return append(slice[:s], slice[s+1:]...)
 // }
+
+func remove(s []store.City, i int) []store.City {
+	s[i] = s[len(s)-1]
+	return s[:len(s)-1]
+}

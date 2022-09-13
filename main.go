@@ -13,10 +13,10 @@ func main() {
 	router := chi.NewRouter()
 	router.Route("/api/v1/city", func(router chi.Router) {
 		router.Get("/", handler.CityView)
-		// 	router.Post("/", handler.AddCityView)
+		router.Post("/", handler.AddCityView)
 		router.Route("/{Id}", func(router chi.Router) {
 			router.Get("/", handler.CityView)
-			// 		router.Delete("/", handler.CityView)
+					router.Delete("/", handler.CityView)
 			// 		router.Patch("/", handler.CityView)
 		})
 	})
