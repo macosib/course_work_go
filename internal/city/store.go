@@ -57,7 +57,7 @@ func (s *Store) createCitiesList(data [][]string) {
 }
 
 func WriteToCsv(s *Store) {
-	f, err := os.Create("./internal/city/cities2.csv")
+	f, err := os.Create("./internal/city/cities.csv")
 	if err != nil {
 		log.Println(err)
 	}
