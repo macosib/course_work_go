@@ -1,7 +1,7 @@
 package main
 
 import (
-	"Attestation_work/pkg/handlers"
+	"Attestation_work/internal/city"
 	"context"
 	"log"
 	"net/http"
@@ -9,24 +9,14 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-
-	"github.com/go-chi/chi"
+	"github.com/julienschmidt/httprouter"
 )
 
 func main() {
-	handler := handlers.GetHandler()
+	router := httprouter.New()
+	handler := city.NewHandler()
+	handler.Register(router)
 	
-	router := chi.NewRouter()
-	router.Route("/api/v1/city", func(router chi.Router) {
-		router.Get("/", handler.GetInfoCityView)
-		router.Post("/", handler.AddCityView)
-		router.Route("/{Id}", func(router chi.Router) {
-			router.Get("/", handler.CityView)
-			router.Delete("/", handler.CityView)
-			router.Patch("/", handler.CityView)
-		})
-	})
-
 	server := &http.Server{Addr: "localhost:8000", Handler: router}
 
 	go func() {
@@ -41,6 +31,6 @@ func main() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	handler.Storage.WriteToCsv()
+	// handler.Storage.WriteToCsv()
 	server.Shutdown(ctx)
 }

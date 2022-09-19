@@ -1,4 +1,4 @@
-package store
+package city
 
 import (
 	"encoding/csv"
@@ -12,9 +12,9 @@ type Store struct {
 	Storage []City
 }
 
-func GetStore() *Store {
+func NewStore() *Store {
 	var store Store
-	fileData := store.ReadCsvFile("./pkg/store/cities.csv")
+	fileData := store.ReadCsvFile("./internal/city/cities.csv")
 	store.createCitiesList(fileData)
 	return &store
 }
@@ -57,7 +57,7 @@ func (s *Store) createCitiesList(data [][]string) {
 
 func (s *Store) WriteToCsv() {
 	fmt.Println("test")
-	f, err := os.Create("./pkg/store/cities.csv")
+	f, err := os.Create("./internal/city/cities.csv")
 	if err != nil {
 		log.Println(err)
 	}

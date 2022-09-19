@@ -1,4 +1,4 @@
-package store
+package city
 
 type City struct {
 	Id int `json:"id"`

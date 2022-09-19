@@ -1,4 +1,4 @@
-package handlers
+package city
 
 import (
 	"net/http"

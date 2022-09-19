@@ -1,7 +1,7 @@
-package handlers
+package city
 
 import (
-	"Attestation_work/pkg/store"
+	"Attestation_work/internal/handlers"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -11,20 +11,35 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
+	"github.com/julienschmidt/httprouter"
 )
 
-type Handler struct {
-	Storage *store.Store
+var _ handlers.Handler = &handler{}
+
+type handler struct {
+	Storage *Store
 }
 
-func GetHandler() *Handler {
-	var handler Handler
-	handler.Storage = store.GetStore()
-	return &handler
-
+func NewHandler() handlers.Handler {
+	return &handler{
+		Storage: NewStore(),
+	}
 }
 
-func (h *Handler) CityView(w http.ResponseWriter, r *http.Request) {
+const (
+	cityUrl   = "/api/v1/city"
+	cityUrlId = "/api/v1/city/:id"
+)
+
+func (h *handler) Register(router *httprouter.Router) {
+	router.GET(cityUrl, h.GetInfoCityView)
+	router.POST(cityUrl, h.AddCityView)
+	router.GET(cityUrlId, h.CityView)
+	router.DELETE(cityUrlId, h.CityView)
+	router.PATCH(cityUrlId, h.CityView)
+}
+
+func (h *handler) CityView(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	w.Header().Set("Content-Type", "application/json")
 	var res []byte
 	switch {
@@ -53,12 +68,12 @@ func (h *Handler) CityView(w http.ResponseWriter, r *http.Request) {
 	w.Write(res)
 }
 
-func (h *Handler) GetInfoCityView(w http.ResponseWriter, r *http.Request) {
+func (h *handler) GetInfoCityView(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	switch {
 	case r.Method == "GET":
 		w.Header().Set("Content-Type", "application/json")
 
-		var response []store.City
+		var response []City
 		var err error
 
 		region, regionOk := r.URL.Query()["Region"]
@@ -90,7 +105,7 @@ func (h *Handler) GetInfoCityView(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		res, _ := json.Marshal(map[string][]store.City{"result": response})
+		res, _ := json.Marshal(map[string][]City{"result": response})
 		w.Write(res)
 	default:
 		res, _ := json.Marshal(&ErrResponse{HTTPStatusCode: 404, StatusText: "Resource not found."})
@@ -98,8 +113,8 @@ func (h *Handler) GetInfoCityView(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getCityListByRegion(h *Handler, r *http.Request, value string) []store.City {
-	result := make([]store.City, 0)
+func getCityListByRegion(h *handler, r *http.Request, value string) []City {
+	result := make([]City, 0)
 	for _, v := range h.Storage.Storage {
 		if v.Region == value {
 			result = append(result, v)
@@ -108,13 +123,13 @@ func getCityListByRegion(h *Handler, r *http.Request, value string) []store.City
 	return result
 }
 
-func getCityListByPopulation(h *Handler, r *http.Request, FoundationFrom string, FoundationTo string) ([]store.City, error) {
+func getCityListByPopulation(h *handler, r *http.Request, FoundationFrom string, FoundationTo string) ([]City, error) {
 	start, errStart := strconv.Atoi(FoundationFrom)
 	end, errEnd := strconv.Atoi(FoundationTo)
 	if errStart != nil || errEnd != nil {
 		return nil, errors.New("ошибка в параметрах запроса")
 	}
-	result := make([]store.City, 0)
+	result := make([]City, 0)
 	for _, v := range h.Storage.Storage {
 		if v.Population >= start && v.Population <= end {
 			result = append(result, v)
@@ -123,13 +138,13 @@ func getCityListByPopulation(h *Handler, r *http.Request, FoundationFrom string,
 	return result, nil
 }
 
-func getCityListByFoundation(h *Handler, r *http.Request, PopulationFrom string, PopulationTo string) ([]store.City, error) {
+func getCityListByFoundation(h *handler, r *http.Request, PopulationFrom string, PopulationTo string) ([]City, error) {
 	start, errStart := strconv.Atoi(PopulationFrom)
 	end, errEnd := strconv.Atoi(PopulationTo)
 	if errStart != nil || errEnd != nil {
 		return nil, errors.New("ошибка в параметрах запроса")
 	}
-	result := make([]store.City, 0)
+	result := make([]City, 0)
 	for _, v := range h.Storage.Storage {
 		if v.Foundation >= start && v.Foundation <= end {
 			result = append(result, v)
@@ -138,8 +153,8 @@ func getCityListByFoundation(h *Handler, r *http.Request, PopulationFrom string,
 	return result, nil
 }
 
-func getCityListByDistrict(h *Handler, r *http.Request, value string) []store.City {
-	result := make([]store.City, 0)
+func getCityListByDistrict(h *handler, r *http.Request, value string) []City {
+	result := make([]City, 0)
 	for _, v := range h.Storage.Storage {
 		if v.District == value {
 			result = append(result, v)
@@ -148,7 +163,7 @@ func getCityListByDistrict(h *Handler, r *http.Request, value string) []store.Ci
 	return result
 }
 
-func (h *Handler) AddCityView(w http.ResponseWriter, r *http.Request) {
+func (h *handler) AddCityView(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	switch {
 	case r.Method == "POST":
 		content, err := ioutil.ReadAll(r.Body)
@@ -157,7 +172,7 @@ func (h *Handler) AddCityView(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		defer r.Body.Close()
-		var data store.City
+		var data City
 		if err := json.Unmarshal(content, &data); err != nil {
 			render.Render(w, r, ErrInvalidRequest(err))
 			return
@@ -173,7 +188,7 @@ func (h *Handler) AddCityView(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func addCity(h *Handler, r *http.Request, city *store.City) map[string]string {
+func addCity(h *handler, r *http.Request, city *City) map[string]string {
 	result := make(map[string]string)
 	index, _ := findCity(h, city.Id)
 	if index != -1 {
@@ -185,7 +200,7 @@ func addCity(h *Handler, r *http.Request, city *store.City) map[string]string {
 	return result
 }
 
-func getCity(h *Handler, r *http.Request) (int, error) {
+func getCity(h *handler, r *http.Request) (int, error) {
 	idParam := chi.URLParam(r, "Id")
 	cityId, err := strconv.Atoi(idParam)
 	if err != nil {
@@ -198,7 +213,7 @@ func getCity(h *Handler, r *http.Request) (int, error) {
 	return index, nil
 }
 
-func changePopulationCity(h *Handler, r *http.Request) map[string]string {
+func changePopulationCity(h *handler, r *http.Request) map[string]string {
 	result := make(map[string]string)
 	idParam := chi.URLParam(r, "Id")
 	populationParam := r.Header.Get("population")
@@ -219,7 +234,7 @@ func changePopulationCity(h *Handler, r *http.Request) map[string]string {
 	return result
 }
 
-func findCity(h *Handler, cityId int) (int, error) {
+func findCity(h *handler, cityId int) (int, error) {
 	for index, v := range h.Storage.Storage {
 		if v.Id == cityId {
 			return index, nil
@@ -228,7 +243,7 @@ func findCity(h *Handler, cityId int) (int, error) {
 	return -1, errors.New("город с таким id не найден")
 }
 
-func remove(s []store.City, i int) []store.City {
+func remove(s []City, i int) []City {
 	s[i] = s[len(s)-1]
 	return s[:len(s)-1]
 }
