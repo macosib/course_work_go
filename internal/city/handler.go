@@ -9,63 +9,97 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-chi/chi"
-	"github.com/go-chi/render"
 	"github.com/julienschmidt/httprouter"
 )
-
-var _ handlers.Handler = &handler{}
 
 type handler struct {
 	Storage *Store
 }
 
-func NewHandler() handlers.Handler {
+func NewHandler(s *Store) handlers.Handler {
 	return &handler{
-		Storage: NewStore(),
+		Storage: s,
 	}
 }
 
 const (
-	cityUrl   = "/api/v1/city"
-	cityUrlId = "/api/v1/city/:id"
+	cityUrl     = "/api/v1/city-create"
+	cityUrlInfo = "/api/v1/city"
+	cityUrlId   = "/api/v1/city/:id"
 )
 
-func (h *handler) Register(router *httprouter.Router) {
-	router.GET(cityUrl, h.GetInfoCityView)
-	router.POST(cityUrl, h.AddCityView)
-	router.GET(cityUrlId, h.CityView)
-	router.DELETE(cityUrlId, h.CityView)
-	router.PATCH(cityUrlId, h.CityView)
+func (h *handler) Register(r *httprouter.Router) {
+
+	r.POST(cityUrl, h.AddCityView)
+	r.GET(cityUrlId, h.CityView)
+	r.GET(cityUrlInfo, h.GetInfoCityView)
+	r.DELETE(cityUrlId, h.CityView)
+	r.PATCH(cityUrlId, h.CityView)
 }
 
 func (h *handler) CityView(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	w.Header().Set("Content-Type", "application/json")
 	var res []byte
+	city, err := getCity(h, r, params)
+	if err != nil {
+		res, _ = json.Marshal(map[string]string{"status": err.Error()})
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(res)
+		return
+	}
 	switch {
 	case r.Method == "GET":
-		index, err := getCity(h, r)
-		if err != nil {
-			render.Render(w, r, ErrInvalidRequest(err))
-			return
-		}
-		response := h.Storage.Storage[index]
-		res, _ = json.Marshal(response)
+		res, _ = json.Marshal(city)
 	case r.Method == "DELETE":
-		index, err := getCity(h, r)
+		delete(h.Storage.Storage, city.Id)
+		res, _ = json.Marshal(city)
+	case r.Method == "PATCH":
+		response, err := changePopulationCity(city, r)
 		if err != nil {
-			render.Render(w, r, ErrInvalidRequest(err))
+			res, _ = json.Marshal(map[string]string{"status": err.Error()})
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(res)
 			return
 		}
-		response := h.Storage.Storage[index]
-		remove(h.Storage.Storage, index)
-		res, _ = json.Marshal(response)
-	case r.Method == "PATCH":
-		response := changePopulationCity(h, r)
+		h.Storage.Storage[city.Id] = *response
 		res, _ = json.Marshal(response)
 	}
 	w.WriteHeader(http.StatusOK)
 	w.Write(res)
+}
+
+func (h *handler) AddCityView(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	w.Header().Set("Content-Type", "application/json")
+	var res []byte
+	switch {
+	case r.Method == "POST":
+		content, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			res, _ = json.Marshal(map[string]string{"status": err.Error()})
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(res)
+			return
+		}
+		defer r.Body.Close()
+		var newCity City
+		if err := json.Unmarshal(content, &newCity); err != nil {
+			res, _ = json.Marshal(map[string]string{"status": err.Error()})
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(res)
+			return
+
+		}
+		err = addCity(h, &newCity)
+		if err != nil {
+			res, _ = json.Marshal(map[string]string{"status": err.Error()})
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(res)
+			return
+		}
+		res, _ := json.Marshal(newCity)
+		w.WriteHeader(http.StatusOK)
+		w.Write(res)
+	}
 }
 
 func (h *handler) GetInfoCityView(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
@@ -75,6 +109,7 @@ func (h *handler) GetInfoCityView(w http.ResponseWriter, r *http.Request, params
 
 		var response []City
 		var err error
+		var res []byte
 
 		region, regionOk := r.URL.Query()["Region"]
 		district, districtOk := r.URL.Query()["District"]
@@ -91,25 +126,29 @@ func (h *handler) GetInfoCityView(w http.ResponseWriter, r *http.Request, params
 		case populationFromOk && populationToOk:
 			response, err = getCityListByPopulation(h, r, strings.Join(populationFrom, ""), strings.Join(populationTo, ""))
 			if err != nil {
-				render.Render(w, r, ErrInvalidRequest(err))
+				res, _ = json.Marshal(map[string]string{"status": err.Error()})
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write(res)
 				return
 			}
 		case foundationFromOk && foundationToOk:
 			response, err = getCityListByFoundation(h, r, strings.Join(foundationFrom, ""), strings.Join(foundationTo, ""))
 			if err != nil {
-				render.Render(w, r, ErrInvalidRequest(err))
+				res, _ = json.Marshal(map[string]string{"status": err.Error()})
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write(res)
 				return
 			}
 		default:
-			render.Render(w, r, ErrInvalidRequest(errors.New("ошибка в параметрах запроса")))
+			res, _ = json.Marshal(map[string]string{"status": "ошибка в параметрах запроса"})
+			w.WriteHeader(http.StatusNotFound)
+			w.Write(res)
 			return
+
 		}
 		w.WriteHeader(http.StatusOK)
-		res, _ := json.Marshal(map[string][]City{"result": response})
-		w.Write(res)
-	default:
-		res, _ := json.Marshal(&ErrResponse{HTTPStatusCode: 404, StatusText: "Resource not found."})
-		w.Write(res)
+		result, _ := json.Marshal(map[string][]City{"result": response})
+		w.Write(result)
 	}
 }
 
@@ -163,87 +202,34 @@ func getCityListByDistrict(h *handler, r *http.Request, value string) []City {
 	return result
 }
 
-func (h *handler) AddCityView(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	switch {
-	case r.Method == "POST":
-		content, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			render.Render(w, r, ErrInvalidRequest(err))
-			return
-		}
-		defer r.Body.Close()
-		var data City
-		if err := json.Unmarshal(content, &data); err != nil {
-			render.Render(w, r, ErrInvalidRequest(err))
-			return
-		}
-		newCity := addCity(h, r, &data)
-		w.WriteHeader(http.StatusOK)
-		res, _ := json.Marshal(newCity)
-		w.Write(res)
-	default:
-		res, _ := json.Marshal(&ErrResponse{HTTPStatusCode: 404, StatusText: "Resource not found."})
-		w.Write(res)
-
-	}
-}
-
-func addCity(h *handler, r *http.Request, city *City) map[string]string {
-	result := make(map[string]string)
-	index, _ := findCity(h, city.Id)
-	if index != -1 {
-		result["status"] = "Такой город уже есть в списке!"
-		return result
-	}
-	h.Storage.Storage = append(h.Storage.Storage, *city)
-	result["status"] = "Город успешно добавлен!"
-	return result
-}
-
-func getCity(h *handler, r *http.Request) (int, error) {
-	idParam := chi.URLParam(r, "Id")
+func getCity(h *handler, r *http.Request, params httprouter.Params) (*City, error) {
+	idParam := params.ByName("id")
 	cityId, err := strconv.Atoi(idParam)
 	if err != nil {
-		return -1, err
+		return nil, errors.New("ошибка в параметрах запроса")
 	}
-	index, err := findCity(h, cityId)
-	if err != nil {
-		return -1, err
+	city, ok := h.Storage.Storage[cityId]
+	if !ok {
+		return nil, errors.New("город с таким id не найден")
 	}
-	return index, nil
+	return &city, nil
 }
 
-func changePopulationCity(h *handler, r *http.Request) map[string]string {
-	result := make(map[string]string)
-	idParam := chi.URLParam(r, "Id")
+func changePopulationCity(s *City, r *http.Request) (*City, error) {
 	populationParam := r.Header.Get("population")
-	cityId, errId := strconv.Atoi(idParam)
-	newPopulation, errPop := strconv.Atoi(populationParam)
-	if errId != nil || errPop != nil {
-		result["error"] = "Ошибка в в параметрах запроса!"
-		return result
+	newPopulation, err := strconv.Atoi(populationParam)
+	s.Population = newPopulation
+	if err != nil {
+		return nil, errors.New("ошибка в в параметрах запроса")
 	}
-	for index, v := range h.Storage.Storage {
-		if v.Id == cityId {
-			h.Storage.Storage[index].Population = newPopulation
-			result["status"] = "Население успешно изменено!"
-			return result
-		}
-	}
-	result["status"] = "Указанный город не найден!"
-	return result
+	return s, nil
 }
 
-func findCity(h *handler, cityId int) (int, error) {
-	for index, v := range h.Storage.Storage {
-		if v.Id == cityId {
-			return index, nil
-		}
+func addCity(h *handler, city *City) error {
+	_, ok := h.Storage.Storage[city.Id]
+	if ok {
+		return errors.New("такой город уже есть в списке")
 	}
-	return -1, errors.New("город с таким id не найден")
-}
-
-func remove(s []City, i int) []City {
-	s[i] = s[len(s)-1]
-	return s[:len(s)-1]
+	h.Storage.Storage[city.Id] = *city
+	return nil
 }

@@ -2,18 +2,18 @@ package city
 
 import (
 	"encoding/csv"
-	"fmt"
 	"log"
 	"os"
 	"strconv"
 )
 
 type Store struct {
-	Storage []City
+	Storage map[int]City
 }
 
 func NewStore() *Store {
 	var store Store
+	store.Storage = make(map[int]City)
 	fileData := store.ReadCsvFile("./internal/city/cities.csv")
 	store.createCitiesList(fileData)
 	return &store
@@ -25,7 +25,6 @@ func (s *Store) ReadCsvFile(fileName string) [][]string {
 		panic(err)
 	}
 	defer file.Close()
-
 	reader := csv.NewReader(file)
 	data, err := reader.ReadAll()
 	if err != nil {
@@ -51,26 +50,25 @@ func (s *Store) createCitiesList(data [][]string) {
 		newCity.District = line[3]
 		newCity.Population = toInt(line[4])
 		newCity.Foundation = toInt(line[5])
-		s.Storage = append(s.Storage, newCity)
+		s.Storage[newCity.Id] = newCity
 	}
 }
 
-func (s *Store) WriteToCsv() {
-	fmt.Println("test")
+func WriteToCsv(s *Store) {
 	f, err := os.Create("./internal/city/cities.csv")
 	if err != nil {
 		log.Println(err)
 	}
 	w := csv.NewWriter(f)
 	defer f.Close()
-	for _, line := range s.Storage {
+	for _, value := range s.Storage {
 		var record []string
-		record = append(record, strconv.Itoa(line.Id))
-		record = append(record, line.Name)
-		record = append(record, line.Region)
-		record = append(record, line.District)
-		record = append(record, strconv.Itoa(line.Population))
-		record = append(record, strconv.Itoa(line.Foundation))
+		record = append(record, strconv.Itoa(value.Id))
+		record = append(record, value.Name)
+		record = append(record, value.Region)
+		record = append(record, value.District)
+		record = append(record, strconv.Itoa(value.Population))
+		record = append(record, strconv.Itoa(value.Foundation))
 		w.Write(record)
 	}
 	w.Flush()
