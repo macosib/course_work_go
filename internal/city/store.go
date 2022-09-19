@@ -5,9 +5,11 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"sync"
 )
 
 type Store struct {
+	mu sync.Mutex
 	Storage map[int]City
 }
 
@@ -55,7 +57,7 @@ func (s *Store) createCitiesList(data [][]string) {
 }
 
 func WriteToCsv(s *Store) {
-	f, err := os.Create("./internal/city/cities.csv")
+	f, err := os.Create("./internal/city/cities2.csv")
 	if err != nil {
 		log.Println(err)
 	}

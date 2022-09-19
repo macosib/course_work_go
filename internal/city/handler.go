@@ -51,9 +51,15 @@ func (h *handler) CityView(w http.ResponseWriter, r *http.Request, params httpro
 	case r.Method == "GET":
 		res, _ = json.Marshal(city)
 	case r.Method == "DELETE":
+		h.Storage.mu.Lock()
+		defer h.Storage.mu.Unlock()
 		delete(h.Storage.Storage, city.Id)
 		res, _ = json.Marshal(city)
+
 	case r.Method == "PATCH":
+		h.Storage.mu.Lock()
+		defer h.Storage.mu.Unlock()
+
 		response, err := changePopulationCity(city, r)
 		if err != nil {
 			res, _ = json.Marshal(map[string]string{"status": err.Error()})
@@ -69,6 +75,8 @@ func (h *handler) CityView(w http.ResponseWriter, r *http.Request, params httpro
 }
 
 func (h *handler) AddCityView(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	h.Storage.mu.Lock()
+	defer h.Storage.mu.Unlock()
 	w.Header().Set("Content-Type", "application/json")
 	var res []byte
 	switch {

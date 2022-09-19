@@ -49,6 +49,31 @@
 						{
 							"key": "Region",
 							"value": "Санкт-Петербург"
+						},
+						{
+							"key": "District",
+							"value": "Центральный",
+							"disabled": true
+						},
+						{
+							"key": "PopulationFrom",
+							"value": "666666",
+							"disabled": true
+						},
+						{
+							"key": "PopulationTo",
+							"value": "10000000",
+							"disabled": true
+						},
+						{
+							"key": "FoundationFrom",
+							"value": "1700",
+							"disabled": true
+						},
+						{
+							"key": "FoundationTo",
+							"value": "5655555",
+							"disabled": true
 						}
 					]
 				}
@@ -61,7 +86,7 @@
 				"method": "DELETE",
 				"header": [],
 				"url": {
-					"raw": "http://localhost:8000/api/v1/city/490",
+					"raw": "http://localhost:8000/api/v1/city/315",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -71,7 +96,7 @@
 						"api",
 						"v1",
 						"city",
-						"490"
+						"315"
 					]
 				}
 			},
@@ -84,7 +109,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"id\": 1424,\n    \"name\": \"Москва22\",\n    \"region\": \"Москва22\",\n    \"district\": \"Центральный222\",\n    \"population\": 11514330,\n    \"foundation\": 1333\n}",
+					"raw": "{\n    \"id\": 4904,\n    \"name\": \"Москва\",\n    \"region\": \"Москва\",\n    \"district\": \"Центральный\",\n    \"population\": 11514330,\n    \"foundation\": 1333\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -92,7 +117,7 @@
 					}
 				},
 				"url": {
-					"raw": "http://localhost:8000/api/v1/city/",
+					"raw": "http://localhost:8000/api/v1/city-create/",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -101,7 +126,7 @@
 					"path": [
 						"api",
 						"v1",
-						"city",
+						"city-create",
 						""
 					]
 				}
@@ -115,12 +140,12 @@
 				"header": [
 					{
 						"key": "population",
-						"value": "543453",
+						"value": "1",
 						"type": "text"
 					}
 				],
 				"url": {
-					"raw": "http://localhost:8000/api/v1/city/490",
+					"raw": "http://localhost:8000/api/v1/city/5",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -130,7 +155,7 @@
 						"api",
 						"v1",
 						"city",
-						"490"
+						"5"
 					],
 					"query": [
 						{
